@@ -1,0 +1,32 @@
+#!/bin/bash
+#This script file will run only the hhh algorithms with the specified input and record the results.
+#Arguments:
+# $1=num items
+# $2=counters
+# $3=threshold
+# $4=file
+# output is $4.summary
+echo "starting"
+make all
+NUM_POINTS=$1
+echo NUM_POINTS=$NUM_POINTS
+NUM_COUNTERS=$2
+echo NUM_COUNTERS=$NUM_COUNTERS
+THRESHOLD=$3
+echo THRESHOLD=$THRESHOLD
+DATAFILE=$4
+echo DATAFILE=$DATAFILE
+SUMMARYFILE=$4.summary
+echo SUMMARYFILE=$SUMMARYFILE
+export SUMMARYFILE
+echo "hhh1:"
+./hhh1 $NUM_POINTS $NUM_COUNTERS $THRESHOLD out.txt < $DATAFILE
+./check1 $DATAFILE out.txt
+echo "hhh1_33:"
+./hhh1_33 $NUM_POINTS $NUM_COUNTERS $THRESHOLD out.txt < $DATAFILE
+./check1_33 $DATAFILE out.txt
+echo "hhh2:"
+./hhh2 $NUM_POINTS $NUM_COUNTERS $THRESHOLD out.txt < $DATAFILE
+./check2 $DATAFILE out.txt
+echo "done"
+rm out.txt

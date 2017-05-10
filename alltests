@@ -1,0 +1,42 @@
+#!/bin/sh
+#perform tests for a whole bunch of values
+#don't waste time checking
+export DONTCHECKABOVE=0
+for i in 1000 3000 10000 30000 100000 300000 1000000 3000000 10000000 30000000 100000000 250000000; do
+	#eps=10% phi=20%
+	./runtests $i 10 `expr $i / 5` $1
+	./paralleltest $i 10 `expr $i / 5` $1
+
+	#eps=1% phi=2%
+	./runtests $i 100 `expr $i / 50` $1
+	./paralleltest $i 100 `expr $i / 50` $1
+
+	#eps=.1% phi=.2%
+	./runtests $i 1000 `expr $i / 500` $1
+	./paralleltest $i 1000 `expr $i / 500` $1
+
+	#eps = 0.001 phi = 0.02
+	./runtests $i 1000 `expr $i / 50` $1
+	./paralleltest $i 1000 `expr $i / 50` $1
+
+	#eps = 0.001 phi = 0.005
+	./runtests $i 1000 `expr $i / 200` $1
+	./paralleltest $i 1000 `expr $i / 200` $1
+
+	#eps = 0.0013333 phi = 0.005
+	./runhhh $i 750 `expr $i / 200` $1
+
+	#eps = 0.002 phi = 0.005
+	./runhhh $i 500 `expr $i / 200` $1
+
+	#eps = 0.004 phi = 0.005
+	./runhhh $i 250 `expr $i / 200` $1
+done
+#now just vary eps (with phi=2*eps)
+for epsi in 2 4 8 16 32 64 128 256 512 1024 \
+10 20 40 80 160 320 640 1280 2560 5120 10240 \
+100 200 400 800 1600 3200 6400 12800 25600 51200 102400 \
+1000 2000 4000 8000 16000 32000 64000 128000 256000 \
+10000 20000 40000 80000 160000; do
+	./runtests 30000000 $epsi `expr 60000000 / $epsi` $1
+done

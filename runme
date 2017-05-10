@@ -1,0 +1,44 @@
+#!/bin/bash
+#Thomas Steinke (tsteinke@seas.harvard.edu) November 2010
+#This README/runme file shows the overall structure of our implementation
+#and experiments. Running this script will download the packet trace,
+#preprocess it, compile our code, run experiments, and, finally, produce
+#the graphs used in our paper. Running this script will take approximately
+#three days. It is not meant to be entirely practical, but it makes it clear
+#how our code works.
+#
+#Firstly,
+#hhh = our algorithm
+#uhhh = our algorithm with unitary updates
+#omp = the parallel version of our algorithm
+#ancestry = partial ancestry algorithm
+#full = full ancestry algorithm
+#Program names are appended by the dimension:
+# *1 and *2 are byte-wise (1- and 2-d resp.) and 1_33 are bit-wise (1-d)
+#
+#There is a makefile that compiles all our programs.
+make all
+#the url of the trace we used. This is a 6.8GB download and is the largest trace we could find.
+FILEURL=https://data.caida.org/datasets/oc48/oc48-original/20030115/1hour/20030115-100000-1-anon.pcap.gz
+#need username and password from caida.org
+#ATTENTION: THIS SCRIPT WILL FAIL WITHOUT A USERNAME AND PASSWORD. PLEASE VISIT www.caida.org.
+USERPASS=user@example.com:Password
+#download
+curl -u $USERPASS $FILEURL > data.pcap.gz
+#data needs to be made human-readable (takes time)
+gunzip data.pcap.gz
+tcpdump -q -n -t -r data.pcap | process > data.txt 2> /dev/null
+rm data.pcap #saves 15GB
+#now experiments can be done
+#For set values use the following
+#NUM_POINTS=1000000
+#NUM_COUNTERS=1000
+#THRESHOLD=1000
+#./runtests $NUM_POINTS $NUM_COUNTERS $THRESHOLD data.txt
+#data will appear in data.txt.summary
+#alltests does a whole bunch of predetermined values
+time ./alltests data.txt
+echo "Results:"
+cat data.txt.summary
+#The following script will produce a lot of plots
+./makeplot.py

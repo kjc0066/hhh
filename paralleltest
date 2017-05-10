@@ -1,0 +1,41 @@
+#!/bin/sh
+#Test the parallel code
+#Arguments:
+# $1=num items
+# $2=counters
+# $3=threshold
+# $4=file
+# output is $4.summary
+
+#maximum number of threads to try
+MAX_THREADS=4
+
+echo "starting"
+make all
+NUM_POINTS=$1
+echo NUM_POINTS=$NUM_POINTS
+NUM_COUNTERS=$2
+echo NUM_COUNTERS=$NUM_COUNTERS
+THRESHOLD=$3
+echo THRESHOLD=$THRESHOLD
+DATAFILE=$4
+echo DATAFILE=$DATAFILE
+SUMMARYFILE=$4.summary
+echo SUMMARYFILE=$SUMMARYFILE
+export SUMMARYFILE
+
+for i in `seq 1 $MAX_THREADS`; do
+export OMP_NUM_THREADS=$i
+echo OMP_NUM_THREADS=$OMP_NUM_THREADS
+echo "omp1:"
+./omp1 $NUM_POINTS $NUM_COUNTERS $THRESHOLD out.txt < $DATAFILE
+./check1 $DATAFILE out.txt
+echo "omp1_33:"
+./omp1_33 $NUM_POINTS $NUM_COUNTERS $THRESHOLD out.txt < $DATAFILE
+./check1_33 $DATAFILE out.txt
+echo "omp2:"
+./omp2 $NUM_POINTS $NUM_COUNTERS $THRESHOLD out.txt < $DATAFILE
+./check2 $DATAFILE out.txt
+done
+echo "done"
+rm out.txt
