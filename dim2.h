@@ -2,8 +2,13 @@
 #ifndef DIM2_H
 #define DIM2_H
 
+#if NUM_MASKS == 1089 /* 33x33 kjc */
+#define NUM_COUNTERS NUM_MASKS //number of masks
+#define MAX_DEPTH 33 //depth of masks lattice */ // not used in hhh2
+#else
 #define NUM_COUNTERS 25 //number of masks
 #define MAX_DEPTH 5 //depth of masks lattice
+#endif
 #define MAX_DESCENDANTS 512 //maximum number of direct descendents of a given ip pair
 
 #include "prng.h"
@@ -30,11 +35,15 @@ void init(double epsilon);
 //deinitialise
 void deinit();
 
+#ifdef LATTICESEARCH
+void update(LCLitem_t * item, int count, int threshold);
+#else
 #ifndef PARALLEL
 //update an input
 void update(LCLitem_t item, int count);
 #else
 void update(LCLitem_t * item, int count);
+#endif
 #endif
 
 //struct to store a heavy hitter output
@@ -48,6 +57,9 @@ typedef struct heavyhitter {
 //the two-dimensional output
 HeavyHitter * output2(int threshold, int * numhitters);
 
+#if 1 /* kjc */
+int masks2plen(LCLitem_t masks, int idx);
+#endif
 #endif
 
 

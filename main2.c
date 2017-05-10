@@ -7,7 +7,11 @@ The main function for the two-dimensional HHH program
 #include <stdlib.h>
 #include <time.h>	
 #include "dim2.h"
+#if 1 /* kjc */
+#include <sys/time.h>
+#else
 #include <sys/timeb.h>
+#endif
 
 #ifdef PARALLEL
 #include <omp.h>
@@ -23,6 +27,17 @@ The main function for the two-dimensional HHH program
 
 //the masks
 LCLitem_t masks[NUM_COUNTERS] = {
+#if 1 /* re-order masks from more specific to less specific.  kjc */
+0xffffffffffffffffull, 
+0xffffff00ffffffffull, 0xffffffffffffff00ull, 
+0xffff0000ffffffffull, 0xffffff00ffffff00ull, 0xffffffffffff0000ull, 
+0xff000000ffffffffull, 0xffff0000ffffff00ull, 0xffffff00ffff0000ull, 0xffffffffff000000ull, 
+0xffffffffull, 0xff000000ffffff00ull, 0xffff0000ffff0000ull, 0xffffff00ff000000ull, 0xffffffff00000000ull, 
+0xffffff00ull, 0xff000000ffff0000ull, 0xffff0000ff000000ull, 0xffffff0000000000ull, 
+0xffff0000ull, 0xff000000ff000000ull, 0xffff000000000000ull, 
+0xff000000ull, 0xff00000000000000ull, 
+0x0ull
+#else	
 	//255.255.255.255
 	//0-4
 	0xFFFFFFFFFFFFFFFFull, //255.255.255.255
@@ -62,6 +77,7 @@ LCLitem_t masks[NUM_COUNTERS] = {
 	0xFFFF000000000000ull, //255.255.0.0
 	0xFF00000000000000ull, //255.0.0.0
 	0x0000000000000000ull  //0.0.0.0
+#endif /* kjc */
 };
 
 
@@ -143,6 +159,25 @@ LCLitem_t masks[NUM_COUNTERS] = {
 	return 0;
 }*/
 
+#if 1 /* kjc */
+int
+masks2plen(LCLitem_t masks, int idx)
+{
+	uint64_t val = masks;
+	int i;
+
+	if (idx == 0)
+		val >>= 32;
+	val &= (uint64_t)0xffffffff;
+	for (i = 0; i < 32; i++)
+		if (val & 0x80000000)
+			val <<= 1;
+		else
+			break;
+	return (i);
+}
+#endif
+
 double dblmainmax(double a, double b) {return (a >= b ? a : b);}
 
 int main(int argc, char * argv[]) {
@@ -158,7 +193,11 @@ int main(int argc, char * argv[]) {
 		int i;
 		int w, x, y, z;
 		clock_t begint, endt;
+#if 1 /* kjc */
+		struct timeval begintb, endtb;
+#else		
 		struct timeb begintb, endtb;
+#endif		
 		unsigned long long ip, _ip;
 		unsigned long long * data;
 		FILE * fp = NULL;
@@ -175,7 +214,11 @@ int main(int argc, char * argv[]) {
 			return 0;
 		}
 
-		
+#if NUM_MASKS == 1089 /* 33x33 kjc */
+		{
+			/* re-initialize the masks */
+		}
+#endif /* kjc */
 
 		data = (unsigned long long *) malloc(sizeof(unsigned long long) * n);
 
@@ -186,21 +229,45 @@ int main(int argc, char * argv[]) {
 			ip = (unsigned long long)256*((unsigned long long)256*((unsigned long long)256*w + x) + y) + z;
 			scanf("%d%d%d%d", &w, &x, &y, &z);
 			_ip = (unsigned long long)256*((unsigned long long)256*((unsigned long long)256*w + x) + y) + z;
+#ifndef SWAP_SRCDST /* kjc */
 			data[i] = (ip << 32 | _ip);
+#else
+			data[i] = (_ip << 32 | ip); // swap src and dst
+#endif			
+#if 1 /* kjc */
+			if (data[i] == 0)
+				fprintf(stderr, "data[%d] == 0\n", i);
+#endif			
 		}
 
 		begint = clock();
+#if 1 /* kjc */
+		gettimeofday(&begintb, NULL);
+#else		
 		ftime(&begintb);
+#endif
+#ifdef LATTICESEARCH
+		update(data, n, threshold);
+#else		
 		#ifndef PARALLEL
 		for (i = 0; i < n; i++) update(data[i], 1);
 		#else
 		update(data, n);
 		#endif
+#endif
 		endt = clock();
+#if 1 /* kjc */
+		gettimeofday(&endtb, NULL);
+#else
 		ftime(&endtb);
+#endif
 
 		time = ((double)(endt-begint))/CLK_PER_SEC;
+#if 1 /* kjc */
+		walltime = ((double) (endtb.tv_sec-begintb.tv_sec))+((double)endtb.tv_usec-(double)begintb.tv_usec)/1000000;
+#else		
 		walltime = ((double) (endtb.time-begintb.time))+((double)endtb.millitm-(double)begintb.millitm)/1000;
+#endif
 		memory = maxmemusage();
 
 		free(data);
@@ -214,9 +281,50 @@ int main(int argc, char * argv[]) {
 		deinit();
 
 		if (fp != NULL) {
+#if 1 /* kjc */			
+			uint64_t lower_total = 0, upper_total = 0;
+#endif
 			//fprintf(fp, "%d\n", m);
 			fprintf(fp, "%s %d %d %d %d %lf %d\n", argv[0], n, counters, threshold, m, time, memory);
 			for (i = 0; i < m; i++) {
+#if 1 /* kjc */
+				int pl0, pl1;
+#ifdef LATTICESEARCH
+				pl0 = ans[i].mask >> 16;  // XXX
+				pl1 = ans[i].mask & 0xffff; // XXX
+#else
+				pl0 = masks2plen(masks[ans[i].mask], 0);
+				pl1 = masks2plen(masks[ans[i].mask], 1);
+#endif				
+				fprintf(fp, "%d.%d.%d.%d/%d %d.%d.%d.%d/%d %d (%.3f%%) %d (%.3f%%)\n",
+#ifndef SWAP_SRCDST
+				(int)((ans[i].item >> 56) & (LCLitem_t)255),
+				(int)((ans[i].item >> 48) & (LCLitem_t)255),
+				(int)((ans[i].item >> 40) & (LCLitem_t)255),
+				(int)((ans[i].item >> 32) & (LCLitem_t)255),
+				pl0,
+				(int)((ans[i].item >> 24)& (LCLitem_t)255),
+				(int)((ans[i].item >> 16) & (LCLitem_t)255),
+				(int)((ans[i].item >> 8) & (LCLitem_t)255),
+				(int)((ans[i].item >> 0) & (LCLitem_t)255),
+				pl1,
+#else
+				(int)((ans[i].item >> 24)& (LCLitem_t)255),
+				(int)((ans[i].item >> 16) & (LCLitem_t)255),
+				(int)((ans[i].item >> 8) & (LCLitem_t)255),
+				(int)((ans[i].item >> 0) & (LCLitem_t)255),
+				pl1,
+				(int)((ans[i].item >> 56) & (LCLitem_t)255),
+				(int)((ans[i].item >> 48) & (LCLitem_t)255),
+				(int)((ans[i].item >> 40) & (LCLitem_t)255),
+				(int)((ans[i].item >> 32) & (LCLitem_t)255),
+				pl0,
+#endif
+				ans[i].lower, (double)ans[i].lower/n*100, 
+				ans[i].upper, (double)ans[i].upper/n*100);
+				lower_total += ans[i].lower;
+				upper_total += ans[i].upper;
+#else				
 				fprintf(fp, "%d %d.%d.%d.%d %d.%d.%d.%d %d %d\n",
 				ans[i].mask,
 				(int)((ans[i].item >> 56) & (LCLitem_t)255),
@@ -228,7 +336,12 @@ int main(int argc, char * argv[]) {
 				(int)((ans[i].item >> 8) & (LCLitem_t)255),
 				(int)((ans[i].item >> 0) & (LCLitem_t)255),
 				ans[i].lower, ans[i].upper);
+#endif /* kjc */
 			}
+#if 1 /* kjc */
+			fprintf(fp, "# lower_total:%.3f%% upper_total:%.3f%%\n",
+				(double)lower_total/n*100, (double)upper_total/n*100);
+#endif			
 			fclose(fp);
 		}
 

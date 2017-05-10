@@ -5,6 +5,9 @@ Implementation of the 2-dimensional Hierarchical Heavy Hitters algorithm (HHH) f
 
 #include <stdlib.h>
 #include <stdio.h>
+#if 1 /* kjc */
+#include <stdint.h>
+#endif
 
 //for debugging purposes only
 #include <assert.h> 
@@ -94,11 +97,45 @@ double twototheminus(int k) {
 	return ans;
 }
 
+#if NUM_MASKS == 1089 /* create 2-d masks from pair of prefix length. kjc */
+#define MAKE_MASK(i, j) ((((uint64_t)0xffffffff << i) & 0xffffffff) << 32 | (((uint64_t)0xffffffff << j) & 0xffffffff))
+#endif
+
 //initialise
 void init(double epsilon) {
 	int i;
+
+#if NUM_MASKS == 1089 /* compute 33x33 masks. kjc */
+	int j, k, n;
+	n = 0;
+	for (k = 0; k < 65; k++) {
+		if (k <= 32) {
+			for (i = k; i >= 0; i--) {
+				j = k - i;
+				masks[n++] = MAKE_MASK(i, j);
+			}
+		} else {
+			for (i = 32; i >= (k - 32); i--) {
+				j = k - i;
+				masks[n++] = MAKE_MASK(i, j);
+			}
+		}
+	}
+	if (n != 1089) {
+		fprintf(stderr, "n != 1089");
+		exit(1);
+	}
+#endif	
+#if 1 /* compute epsilons for lower levels from sum of prefix lengths. kjc */
+	int plensum;
+	for (i = 0; i < NUM_COUNTERS; i++) {
+		plensum = masks2plen(masks[i], 0) + masks2plen(masks[i], 1);
+		counters[i] = LCL_Init(dblmax(epsilon, twototheminus(plensum)));
+	}
+#else		
 	for (i = 0; i < NUM_COUNTERS; i++)
 		counters[i] = LCL_Init(dblmax(epsilon, twototheminus(leveleps[i])));
+#endif
 }
 
 //deinitialise

@@ -7,7 +7,11 @@ This is a test main function for the one-dimensional output HHH algorithms
 #include <stdio.h>
 #include <time.h>
 
+#if 1 /* kjc */
+#include <sys/time.h>
+#else
 #include <sys/timeb.h>
+#endif
 
 #ifdef PARALLEL
 #include <omp.h>
@@ -171,7 +175,11 @@ int main(int argc, char * argv[]) {
 		int i;
 		unsigned int w, x, y, z;
 		clock_t begint, endt;
+#if 1 /* kjc */
+		struct timeval begintb, endtb;
+#else		
 		struct timeb begintb, endtb;
+#endif
 		unsigned int ip;
 		unsigned int * data;
 		FILE * fp = NULL; //the file for the output
@@ -199,17 +207,29 @@ int main(int argc, char * argv[]) {
 		}
 
 		begint = clock();
+#if 1 /* kjc */
+		gettimeofday(&begintb, NULL);
+#else		
 		ftime(&begintb);
+#endif		
 		#ifndef PARALLEL
 		for (i = 0; i < n; i++) update(data[i], 1);
 		#else
 		update(data, n);
 		#endif
 		endt = clock();
+#if 1 /* kjc */
+		gettimeofday(&endtb, NULL);
+#else
 		ftime(&endtb);
+#endif		
 
 		time = ((double)(endt-begint))/CLK_PER_SEC;
+#if 1 /* kjc */
+		walltime = ((double) (endtb.tv_sec-begintb.tv_sec))+((double)endtb.tv_usec-(double)begintb.tv_usec)/1000000;
+#else		
 		walltime = ((double) (endtb.time-begintb.time))+((double)endtb.millitm-(double)begintb.millitm)/1000;
+#endif
 		memory=maxmemusage();
 
 		free(data);

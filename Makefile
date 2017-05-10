@@ -1,4 +1,5 @@
 CC=gcc -O2 -Wall -lm -DMEMORY_STATS
+#CC=cc -g -Wall -lm -DMEMORY_STATS
 all: hhh1 uhhh1 omp1 ancestry1 full1 hhh1_33 uhhh1_33 omp1_33 ancestry1_33 full1_33 hhh2 uhhh2 omp2 ancestry2 full2 check1 check1_33 check2 process
 hhh1: hhh1.c hhh1.h main1.c lossycount.h lossycount.c hashtable.h hashtable.c prng.h prng.c alloc.h alloc.c Makefile
 	$(CC) -DHHH hhh1.c main1.c lossycount.c hashtable.c prng.c alloc.c -o hhh1
@@ -30,6 +31,16 @@ ancestry2: ancestry2.c main2.c dim2.h prng.h alloc.h alloc.c Makefile
 	$(CC) -DDIMENSION2 ancestry2.c main2.c prng.c alloc.c -o ancestry2
 full2: ancestry2.c main2.c dim2.h prng.h alloc.h alloc.c Makefile
 	$(CC) -DDIMENSION2 -DFULL_ANCESTRY ancestry2.c main2.c prng.c alloc.c -o full2
+hhh2_1089: hhh2.c main2.c dim2.h lossycount.c lossycount.h prng.h prng.c alloc.h alloc.c Makefile
+	$(CC) -DDIMENSION2 -DNUM_MASKS=1089 hhh2.c lossycount.c prng.c main2.c alloc.c -o hhh2_1089
+rls2: lattice_search.c main2.c dim2.h alloc.h alloc.c Makefile
+	$(CC) -DDIMENSION2 -DLATTICESEARCH lattice_search.c main2.c alloc.c -o rls2
+rls2_1089: lattice_search.c main2.c dim2.h alloc.h alloc.c Makefile
+	$(CC) -DDIMENSION2 -DNUM_MASKS=1089 -DLATTICESEARCH lattice_search.c main2.c alloc.c -o rls2_1089
+
+rls2_1089_swap: lattice_search.c main2.c dim2.h alloc.h alloc.c Makefile
+	$(CC) -DDIMENSION2 -DNUM_MASKS=1089 -DLATTICESEARCH -DSWAP_SRCDST lattice_search.c main2.c alloc.c -o rls2_1089_swap
+
 check1: check1.cpp Makefile
 	g++ -ansi -Wall -O2 check1.cpp -o check1
 check1_33: check1.cpp Makefile
@@ -39,3 +50,5 @@ check2: check2.cpp Makefile
 process: process.c Makefile
 	gcc -ansi -Wall -O2 process.c -o process
 
+ALL = hhh1 uhhh1 omp1 ancestry1 full1 hhh1_33 uhhh1_33 omp1_33 ancestry1_33 full1_33 hhh2 uhhh2 omp2 ancestry2 full2 hhh2_1089 rls2 rls2_1089 rls2_1089_swap check1 check1_33 check2 process
+clean:;	-rm -f $(ALL) *.o core *.core *~
